@@ -6,6 +6,7 @@ pyyaml
 # Audio processing
 kaldi_native_fbank
 sentencepiece
+sounddevice
 
 # RKNN inference
 rknn-toolkit-lite2

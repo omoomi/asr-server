@@ -13,6 +13,7 @@ class TranscriptionResult:
     events: List[str] = field(default_factory=list)
     use_itn: bool = False
     raw: str = ""
+    segments: List[dict] = field(default_factory=list)
 
 
 LANGUAGE_TOKENS = {
@@ -50,8 +51,6 @@ ITN_TOKENS = {
     "<|withitn|>": True,
     "<|woitn|>": False,
 }
-
-ALL_TOKENS = {**LANGUAGE_TOKENS, **EMOTION_TOKENS, **EVENT_TOKENS, **ITN_TOKENS}
 
 
 def parse_transcription(raw_text: str) -> TranscriptionResult:
