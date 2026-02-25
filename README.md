@@ -7,7 +7,7 @@ Multilingual speech recognition server with language detection, emotion recognit
 - **Automatic Speech Recognition (ASR)** - Multilingual transcription (Chinese, English, Cantonese, Japanese, Korean)
 - **Language Identification (LID)** - Automatic language detection
 - **Speech Emotion Recognition (SER)** - Emotion classification (HAPPY, SAD, ANGRY, NEUTRAL, etc.)
-- **Audio Event Detection (AED)** - Event classification (Speech, BGM, Applusause, Laughter, etc.)
+- **Audio Event Detection (AED)** - Event classification (Speech, BGM, Applause, Laughter, etc.)
 - **NPU Acceleration** - ~15x realtime inference on RK3588
 - **Push-to-Talk CLI** - Record and transcribe from microphone
 
@@ -17,6 +17,7 @@ Multilingual speech recognition server with language detection, emotion recognit
 - Python 3.10+
 - RKNN runtime library (`librknnrt.so`)
 - Microphone (for push-to-talk mode)
+- PortAudio library (`libportaudio2`) for microphone capture
 
 ## Installation
 
@@ -27,6 +28,9 @@ source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Install PortAudio (required for microphone)
+sudo apt-get install -y libportaudio2
 
 # Download models (~485 MB)
 python download_models.py
@@ -75,12 +79,28 @@ transcribe options:
   --raw               Print raw output with tokens
 
 talk options:
-  --device, -d INT    Audio device ID
+  --device, -d INT    Audio device ID (auto-detects USB devices)
   --max-duration, -m  Max recording duration in seconds (default: 30)
 
 server options:
   --host HOST         Server host (default: 0.0.0.0)
   --port, -p INT      Server port (default: 8000)
+```
+
+### CLI Output Format
+
+**transcribe command:**
+```
+Language: en
+Emotion: EMO_UNKNOWN
+Events: Speech
+Text: and so my fellow americans ask not what your country can do for you...
+```
+
+**talk command:**
+```
+[en] [EMO_UNKNOWN] [Speech]
+  and so my fellow americans ask not what your country can do for you...
 ```
 
 ### API Endpoints
@@ -107,14 +127,35 @@ curl -X POST -F "file=@audio.wav" \
 
 ```json
 {
-  "text": "transcribed text",
+  "text": "and so my fellow americans ask not what your country can do for you",
   "language": "en",
-  "emotion": "NEUTRAL",
+  "emotion": "EMO_UNKNOWN",
   "events": ["Speech"],
-  "raw": "<|en|><|NEUTRAL|><|Speech|><|woitn|>transcribed text",
-  "segments": [...]
+  "raw": "<|en|><|EMO_UNKNOWN|><|Speech|><|woitn|>and so my fellow americans...",
+  "segments": [
+    {
+      "start_time_s": 0.3,
+      "end_time_s": 10.98,
+      "text": "and so my fellow americans ask not what your country can do for you",
+      "language": "en",
+      "emotion": "EMO_UNKNOWN",
+      "events": ["Speech"],
+      "raw": "<|en|><|EMO_UNKNOWN|><|Speech|><|woitn|>..."
+    }
+  ]
 }
 ```
+
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `text` | string | Clean transcription text (special tokens removed) |
+| `language` | string | Detected language: `zh`, `en`, `yue`, `ja`, `ko`, `nospeech` |
+| `emotion` | string | Detected emotion: `HAPPY`, `SAD`, `ANGRY`, `NEUTRAL`, `FEARFUL`, `DISGUSTED`, `SURPRISED`, `EMO_UNKNOWN` |
+| `events` | array | Detected audio events: `Speech`, `BGM`, `Applause`, `Laughter`, `Cry`, `Sneeze`, `Breath`, `Cough` |
+| `raw` | string | Raw model output with special tokens |
+| `segments` | array | Per-segment results with timing information |
 
 ### Python API
 
@@ -128,6 +169,7 @@ formatted = format_output(result)
 print(f"Text: {formatted['text']}")
 print(f"Language: {formatted['language']}")
 print(f"Emotion: {formatted['emotion']}")
+print(f"Events: {formatted['events']}")
 ```
 
 ## Environment Variables
@@ -155,6 +197,36 @@ asr-server/
 ├── requirements.txt
 └── README.md
 ```
+
+## Performance
+
+- **Inference speed**: ~15-20x realtime (processing 15-20s audio per second)
+- **Memory usage**: ~1.1GB
+- **Latency**: ~70ms for 10s audio
+
+## Supported Languages
+
+| Code | Language |
+|------|----------|
+| `auto` | Automatic detection |
+| `zh` | Chinese (Mandarin) |
+| `en` | English |
+| `yue` | Cantonese |
+| `ja` | Japanese |
+| `ko` | Korean |
+
+## Supported Emotions
+
+| Emotion | Description |
+|---------|-------------|
+| `HAPPY` | Happy/positive emotion |
+| `SAD` | Sad/negative emotion |
+| `ANGRY` | Angry/aggressive emotion |
+| `NEUTRAL` | Neutral/calm speech |
+| `FEARFUL` | Fearful/anxious emotion |
+| `DISGUSTED` | Disgusted emotion |
+| `SURPRISED` | Surprised emotion |
+| `EMO_UNKNOWN` | Unknown/unclassified emotion |
 
 ## References
 

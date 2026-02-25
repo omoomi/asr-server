@@ -6,6 +6,8 @@ pyyaml
 # Audio processing
 kaldi_native_fbank
 sentencepiece
+
+# Microphone capture
 sounddevice
 
 # RKNN inference
