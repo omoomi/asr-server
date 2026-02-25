@@ -1,0 +1,22 @@
+# Core dependencies
+numpy<2
+soundfile
+pyyaml
+
+# Audio processing
+kaldi_native_fbank
+sentencepiece
+
+# RKNN inference
+rknn-toolkit-lite2
+
+# ONNX runtime (for VAD model)
+onnxruntime
+
+# API server
+fastapi
+uvicorn
+python-multipart
+
+# Model download (optional, for initial setup)
+huggingface_hub
