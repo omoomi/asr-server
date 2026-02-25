@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Postprocessor for SenseVoice model output."""
 
+import re
 from dataclasses import dataclass, field
 from typing import List, Optional
 
@@ -45,12 +46,20 @@ EVENT_TOKENS = {
     "<|Sneeze|>": "Sneeze",
     "<|Breath|>": "Breath",
     "<|Cough|>": "Cough",
+    "<|Event_UNK|>": "Unknown",
 }
 
 ITN_TOKENS = {
     "<|withitn|>": True,
     "<|woitn|>": False,
 }
+
+SPECIAL_TOKEN_PATTERN = re.compile(r"<\|[^|]+\|>")
+
+
+def strip_special_tokens(text: str) -> str:
+    """Remove any remaining special tokens from text."""
+    return SPECIAL_TOKEN_PATTERN.sub("", text).strip()
 
 
 def parse_transcription(raw_text: str) -> TranscriptionResult:
@@ -73,9 +82,9 @@ def parse_transcription(raw_text: str) -> TranscriptionResult:
             break
 
     for token, evt in EVENT_TOKENS.items():
-        if token in text:
+        while token in text:
             events.append(evt)
-            text = text.replace(token, "")
+            text = text.replace(token, "", 1)
 
     for token, itn in ITN_TOKENS.items():
         if token in text:
@@ -83,8 +92,10 @@ def parse_transcription(raw_text: str) -> TranscriptionResult:
             text = text.replace(token, "")
             break
 
+    text = strip_special_tokens(text)
+
     return TranscriptionResult(
-        text=text.strip(),
+        text=text,
         language=language,
         emotion=emotion,
         events=events,

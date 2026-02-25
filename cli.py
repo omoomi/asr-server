@@ -133,7 +133,7 @@ def cmd_transcribe(args):
     else:
         print(f"Language: {formatted['language']}")
         print(f"Emotion: {formatted['emotion']}")
-        print(f"Events: {formatted['events']}")
+        print(f"Events: {', '.join(formatted['events']) if formatted['events'] else 'None'}")
         print(f"Text: {formatted['text']}")
     
     return 0
@@ -208,7 +208,11 @@ def cmd_talk(args):
                 result = model.transcribe(tmp_path, language=args.language)
                 formatted = format_output(result)
                 print()
-                print(f"[{formatted['language'] or '??'}] {formatted['text']}")
+                lang = formatted['language'] or '??'
+                emotion = formatted['emotion'] or 'UNKNOWN'
+                events = ', '.join(formatted['events']) if formatted['events'] else 'None'
+                print(f"[{lang}] [{emotion}] [{events}]")
+                print(f"  {formatted['text']}")
                 print()
             finally:
                 Path(tmp_path).unlink()
