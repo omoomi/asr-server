@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 MODEL_DIR = os.environ.get("SENSEVOICE_MODEL_DIR", "models")
 HOST = os.environ.get("SENSEVOICE_HOST", "0.0.0.0")
 PORT = int(os.environ.get("SENSEVOICE_PORT", "8000"))
+TMP_DIR = os.environ.get("SENSEVOICE_TMP_DIR", "/dev/shm")
 
 model: Optional[SenseVoiceRKNN] = None
 
@@ -110,15 +111,26 @@ async def transcribe_upload(
     if extension not in ALLOWED_EXTENSIONS:
         raise HTTPException(status_code=400, detail=f"Unsupported audio format: {extension}")
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=extension) as tmp:
-        tmp.write(await file.read())
+    tmp_dir = TMP_DIR if Path(TMP_DIR).exists() else None
+    upload_started_at = time.time()
+    payload = await file.read()
+    with tempfile.NamedTemporaryFile(delete=False, suffix=extension, dir=tmp_dir) as tmp:
+        tmp.write(payload)
         tmp_path = tmp.name
+    upload_write_ms = (time.time() - upload_started_at) * 1000
 
     try:
         logger.info(f"Transcribing uploaded file: {file.filename}")
         start = time.time()
         result = model.transcribe(tmp_path, language=language, use_itn=use_itn)
-        logger.info(f"Transcription completed in {time.time() - start:.2f}s")
+        transcription_ms = (time.time() - start) * 1000
+        logger.info(
+            "Upload transcribed: file=%s tmp_path=%s write_ms=%.1f transcribe_ms=%.1f",
+            file.filename,
+            tmp_path,
+            upload_write_ms,
+            transcription_ms,
+        )
         return TranscribeResponse(**format_output(result))
     except Exception as e:
         logger.exception("Transcription failed")

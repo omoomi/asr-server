@@ -123,6 +123,8 @@ curl -X POST -F "file=@audio.wav" \
   http://localhost:8000/transcribe/upload
 ```
 
+Uploaded files are written to a temporary file before inference. By default the server now uses `/dev/shm` as the fast-path temp directory when it exists, which avoids slower disk-backed temp storage on typical Linux deployments. Override this with `SENSEVOICE_TMP_DIR` if you need a different location.
+
 ### Response Format
 
 ```json
@@ -179,6 +181,7 @@ print(f"Events: {formatted['events']}")
 | `SENSEVOICE_MODEL_DIR` | `models` | Model directory path |
 | `SENSEVOICE_HOST` | `0.0.0.0` | Server host |
 | `SENSEVOICE_PORT` | `8000` | Server port |
+| `SENSEVOICE_TMP_DIR` | `/dev/shm` | Preferred temporary directory for uploaded audio files before transcription; falls back to the system temp dir if the path does not exist |
 
 ## Project Structure
 
@@ -203,6 +206,17 @@ asr-server/
 - **Inference speed**: ~15-20x realtime (processing 15-20s audio per second)
 - **Memory usage**: ~1.1GB
 - **Latency**: ~70ms for 10s audio
+- **Upload temp-file path**: upload requests prefer `/dev/shm` to reduce temp-file I/O overhead when available
+
+## Logging
+
+For `POST /transcribe/upload`, the server now logs upload-write time separately from model transcription time. This makes it easier to distinguish request I/O cost from actual ASR inference latency in production logs.
+
+Example log shape:
+
+```text
+Upload transcribed: file=audio.wav tmp_path=/dev/shm/tmpabcd.wav write_ms=3.4 transcribe_ms=71.8
+```
 
 ## Supported Languages
 
